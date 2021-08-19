@@ -1,6 +1,8 @@
 # Golang Ransomware
 
 - needed simple ransomware to test a few things and didn't trust the existing ransomware code bases on git.
-- it does not delete the files it encrypts, instead it drops them in an "encrypted" directory created in the current working directory where the binary is executed from.
-- code base also contains a decryption routine that will decrypt all the files found in the "encrypted" directory
+- it has both encryption and decryption routines inside, just uncomment the portion you want/need
+  - encrypted files will have a .enc file extension
 - the key is static inside of the code base
+- targetExt is used to target specific file extensions
+- compile with `go build -ldflags "-s -w" main.go`
